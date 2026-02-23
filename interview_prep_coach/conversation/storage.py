@@ -45,6 +45,21 @@ class MemoryStorage:
         data = json.loads(path.read_text())
         return WorkingMemory.model_validate(data)
 
+    def save_evolution_state(self, user_id: str, state: "EvolutionState") -> None:
+        """Save evolution state to disk."""
+        path = self.data_dir / "evolution" / f"{user_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(state.model_dump_json(indent=2))
+
+    def load_evolution_state(self, user_id: str) -> Optional["EvolutionState"]:
+        """Load evolution state from disk."""
+        path = self.data_dir / "evolution" / f"{user_id}.json"
+        if not path.exists():
+            return None
+
+        from interview_prep_coach.evolution.state import EvolutionState
+        return EvolutionState.model_validate_json(path.read_text())
+
     def list_users(self) -> list[str]:
         users = set()
         for path in self.data_dir.glob("*_thread.json"):
