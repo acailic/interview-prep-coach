@@ -5,6 +5,10 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from anthropic import Anthropic
 
+from interview_prep_coach.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 EXTRACTION_PROMPT = """Analyze this conversation exchange for interview preparation insights.
 
@@ -56,5 +60,6 @@ class PatternExtractor:
                 strengths=data.get("strengths", []),
                 engagement_level=data.get("engagement_level", "medium"),
             )
-        except (json.JSONDecodeError, KeyError):
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse extraction response: {e}")
             return ExtractionResult()
