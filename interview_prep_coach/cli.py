@@ -24,6 +24,7 @@ from .practice import QuestionBank
 from .practice import Scorer
 from .tracking import PostInterviewCapture
 from .tracking import ProgressTracker
+from .conversation import ConversationSession, MemoryStorage
 
 logger = get_logger(__name__)
 
@@ -64,6 +65,7 @@ def main():
     preparation guide with study plans, practice questions, and talking points.
 
     Commands:
+        chat           Start or continue a conversation with Scout
         practice       Start interactive practice session
         progress       Show practice progress and weak areas
         log-interview  Log a real interview experience
@@ -379,6 +381,61 @@ def quick_practice(category: str, questions: int):
         click.echo("\n Quick practice complete!")
 
     asyncio.run(run())
+
+
+@main.command()
+@click.option("--message", "-m", type=str, default=None, help="Send a single message and exit")
+@click.option("--data-dir", type=click.Path(), default="./data/conversations", help="Data directory")
+@click.option("--user", type=str, default="default", help="User ID for session")
+def chat(message: str | None, data_dir: str, user: str):
+    """Start or continue a conversation with Scout.
+
+    Interactive chat with your interview prep coach. Optionally send a single
+    message with -m flag and exit.
+
+    Examples:
+        python -m interview_prep_coach chat
+        python -m interview_prep_coach chat -m "Help me with behavioral questions"
+        python -m interview_prep_coach chat --user alice --data-dir ./my_data
+    """
+    storage = MemoryStorage(data_dir)
+    session = ConversationSession(user_id=user, storage=storage)
+
+    if message:
+        response = session.send_message(message)
+        click.echo(response)
+        return
+
+    click.echo("\n Scout - Your Interview Prep Coach")
+    click.echo(" Type 'quit' to exit, 'style <feedback>' to adjust coaching style\n")
+
+    while True:
+        try:
+            user_input = click.prompt("You", type=str, default="").strip()
+        except (KeyboardInterrupt, EOFError):
+            click.echo("\n Goodbye!")
+            break
+
+        if not user_input:
+            continue
+
+        if user_input.lower() == "quit":
+            click.echo(" Goodbye!")
+            break
+
+        if user_input.lower().startswith("style "):
+            feedback = user_input[6:].strip()
+            session.adjust_style(feedback)
+            click.echo(f" Style adjusted based on: {feedback}")
+            continue
+
+        if user_input.lower() == "context":
+            summary = session.get_context_summary()
+            click.echo(f" Current context:\n{summary}" if summary else " No context set yet")
+            continue
+
+        response = session.send_message(user_input)
+        click.echo(f"\n Scout: {response}\n")
 
 
 if __name__ == "__main__":
