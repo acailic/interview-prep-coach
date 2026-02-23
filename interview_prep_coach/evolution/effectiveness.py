@@ -1,14 +1,14 @@
 """Style effectiveness tracking for drift."""
 
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class EffectivenessTracker(BaseModel):
     """Tracks which style combinations lead to better engagement."""
 
     style_outcomes: dict[str, int] = Field(default_factory=dict)
-    _sample_counts: dict[str, int] = {}
+    _sample_counts: dict[str, int] = PrivateAttr(default_factory=dict)
 
     def record_outcome(self, style: str, engagement: str) -> None:
         """Record engagement outcome for a style configuration.
@@ -24,9 +24,7 @@ class EffectivenessTracker(BaseModel):
             self.style_outcomes[style] = 0
         self.style_outcomes[style] += delta
 
-        # Track sample count separately (not persisted)
-        if not hasattr(self, "_sample_counts"):
-            self._sample_counts = {}
+        # Track sample count using private attribute
         self._sample_counts[style] = self._sample_counts.get(style, 0) + 1
 
     def get_recommended_style(self, min_samples: int = 5) -> Optional[str]:
@@ -38,9 +36,6 @@ class EffectivenessTracker(BaseModel):
         Returns:
             Style string with highest score, or None if insufficient data
         """
-        if not hasattr(self, "_sample_counts"):
-            return None
-
         qualified_styles = [
             style for style, count in self._sample_counts.items()
             if count >= min_samples and style in self.style_outcomes
