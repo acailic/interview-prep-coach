@@ -55,6 +55,9 @@ htmlcov/
 data/
 .data/
 
+# Git worktrees
+.worktrees/
+
 # Logs
 *.log
 logs/
