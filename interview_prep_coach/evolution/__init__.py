@@ -3,10 +3,12 @@
 from .pattern_extractor import ExtractionResult, PatternExtractor
 from .relationship_tracker import RelationshipTracker
 from .effectiveness import EffectivenessTracker
+from .state import EvolutionState
 
 __all__ = [
     "ExtractionResult",
     "PatternExtractor",
     "RelationshipTracker",
     "EffectivenessTracker",
+    "EvolutionState",
 ]
