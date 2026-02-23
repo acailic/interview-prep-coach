@@ -37,3 +37,30 @@ class TestPatternExtractor:
             assistant_response="Let's work on that together.",
         )
         assert isinstance(result, ExtractionResult)
+
+
+class TestPatternExtractorAI:
+    """Tests for AI-powered extraction."""
+
+    def test_extract_with_real_content(self, monkeypatch):
+        """extract() should parse AI response correctly."""
+        mock_response = type(
+            "MockResponse",
+            (),
+            {"content": [type("MockContent", (), {"text": '{"weaknesses": ["system design scaling"], "strengths": ["clear communication"], "engagement_level": "high"}'})]},
+        )()
+
+        def mock_create(*args, **kwargs):
+            return mock_response
+
+        extractor = PatternExtractor(api_key="test-key")
+        monkeypatch.setattr(extractor.client.messages, "create", mock_create)
+
+        result = extractor.extract(
+            user_message="How do I design a distributed cache?",
+            assistant_response="Great question! Let's explore caching strategies...",
+        )
+
+        assert "system design scaling" in result.weaknesses
+        assert "clear communication" in result.strengths
+        assert result.engagement_level == "high"
