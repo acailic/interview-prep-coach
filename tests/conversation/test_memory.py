@@ -1,6 +1,7 @@
 import pytest
 
 from interview_prep_coach.conversation.memory import InterviewContext, WorkingMemory
+from interview_prep_coach.job.context import JobContext
 
 
 class TestInterviewContext:
@@ -47,3 +48,34 @@ class TestWorkingMemory:
         context_str = memory.to_context_string()
         assert "Acme" in context_str
         assert "specificity" in context_str
+
+
+class TestWorkingMemoryJobContext:
+    """Tests for job context in working memory."""
+
+    def test_set_job_context(self):
+        """Should set job context in working memory."""
+        memory = WorkingMemory()
+        job = JobContext(
+            company="TechCorp",
+            position="Senior Engineer",
+            tech_stack=["Python", "Kubernetes"],
+        )
+        memory.set_job_context(job)
+
+        assert memory.job_context is not None
+        assert memory.job_context.company == "TechCorp"
+
+    def test_to_context_string_includes_job(self):
+        """Should include job context in context string."""
+        memory = WorkingMemory()
+        job = JobContext(
+            company="TechCorp",
+            position="Senior Engineer",
+            tech_stack=["Python"],
+        )
+        memory.set_job_context(job)
+
+        context = memory.to_context_string()
+        assert "TechCorp" in context
+        assert "Senior Engineer" in context

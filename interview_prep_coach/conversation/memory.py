@@ -1,5 +1,9 @@
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING
+
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from interview_prep_coach.job.context import JobContext
 
 
 class InterviewContext(BaseModel):
@@ -15,6 +19,7 @@ class WorkingMemory(BaseModel):
     recent_strengths: list[str] = Field(default_factory=list)
     style_preferences: dict[str, str] = Field(default_factory=dict)
     last_session_summary: Optional[str] = None
+    job_context: Optional["JobContext"] = None
 
     def set_context(
         self,
@@ -42,8 +47,19 @@ class WorkingMemory(BaseModel):
     def get_preference(self, dimension: str) -> Optional[str]:
         return self.style_preferences.get(dimension)
 
+    def set_job_context(self, job: "JobContext") -> None:
+        """Set the job context for personalized coaching."""
+        self.job_context = job
+
     def to_context_string(self) -> str:
         parts = []
+
+        if self.job_context:
+            parts.append(f"Target Role: {self.job_context.get_summary()}")
+            if self.job_context.tech_stack:
+                parts.append(f"Tech Stack: {', '.join(self.job_context.tech_stack)}")
+            if self.job_context.key_skills:
+                parts.append(f"Key Skills: {', '.join(self.job_context.key_skills)}")
 
         if self.current_context:
             ctx = self.current_context
@@ -67,3 +83,12 @@ class WorkingMemory(BaseModel):
             parts.append(f"Last session: {self.last_session_summary}")
 
         return "\n".join(parts)
+
+
+def _rebuild_working_memory() -> None:
+    from interview_prep_coach.job.context import JobContext
+
+    WorkingMemory.model_rebuild(_types_namespace={"JobContext": JobContext})
+
+
+_rebuild_working_memory()
