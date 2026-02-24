@@ -11,6 +11,7 @@ from .thread import ConversationThread, MessageRole
 from ..coaching.style_manager import StyleManager
 from ..evolution.pattern_extractor import PatternExtractor
 from ..evolution.state import EvolutionState
+from ..job.context import JobContext
 
 
 SCOUT_SYSTEM_PROMPT = """You are Scout, an interview prep coach. You're warm, supportive, and practical.
@@ -131,6 +132,11 @@ class ConversationSession:
 
     def get_context_summary(self) -> str:
         return self.working_memory.to_context_string()
+
+    def set_job_context(self, job: JobContext) -> None:
+        """Set job context for personalized coaching."""
+        self.working_memory.set_job_context(job)
+        self._save_state()
 
     def _save_state(self) -> None:
         self.storage.save_thread(self.thread)

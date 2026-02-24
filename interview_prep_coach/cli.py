@@ -387,7 +387,9 @@ def quick_practice(category: str, questions: int):
 @click.option("--message", "-m", type=str, default=None, help="Send a single message and exit")
 @click.option("--data-dir", type=click.Path(), default="./data/conversations", help="Data directory")
 @click.option("--user", type=str, default="default", help="User ID for session")
-def chat(message: str | None, data_dir: str, user: str):
+@click.option("--job", type=click.Path(exists=True), default=None, help="Job posting file to use for context")
+@click.option("--job-url", type=str, default=None, help="Job posting URL to use for context")
+def chat(message: str | None, data_dir: str, user: str, job: str | None, job_url: str | None):
     """Start or continue a conversation with Scout.
 
     Interactive chat with your interview prep coach. Optionally send a single
@@ -396,10 +398,22 @@ def chat(message: str | None, data_dir: str, user: str):
     Examples:
         python -m interview_prep_coach chat
         python -m interview_prep_coach chat -m "Help me with behavioral questions"
-        python -m interview_prep_coach chat --user alice --data-dir ./my_data
+        python -m interview_prep_coach chat --job posting.md
+        python -m interview_prep_coach chat --job-url https://company.com/jobs/123
     """
+    from .job.extractor import JobExtractor
+
     storage = MemoryStorage(data_dir)
     session = ConversationSession(user_id=user, storage=storage)
+
+    if job or job_url:
+        extractor = JobExtractor()
+        if job:
+            job_context = extractor.extract_from_file(job)
+        else:
+            job_context = extractor.extract_from_url(job_url)
+        session.set_job_context(job_context)
+        click.echo(f"\n Job loaded: {job_context.get_summary()}")
 
     if message:
         response = session.send_message(message)

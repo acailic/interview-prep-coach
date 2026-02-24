@@ -11,10 +11,12 @@ Contracts:
 """
 
 from collections import Counter
-from datetime import UTC
 from datetime import date
 from datetime import datetime
+from datetime import timezone
 from pathlib import Path
+
+UTC = timezone.utc
 
 from ..models import InterviewOutcome
 from ..models import PostInterviewLog
