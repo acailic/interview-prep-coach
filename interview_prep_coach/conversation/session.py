@@ -12,6 +12,10 @@ from ..coaching.style_manager import StyleManager
 from ..evolution.pattern_extractor import PatternExtractor
 from ..evolution.state import EvolutionState
 from ..job.context import JobContext
+from ..versioning.storage import AnswerStorage
+from interview_prep_coach.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 SCOUT_SYSTEM_PROMPT = """You are Scout, an interview prep coach. You're warm, supportive, and practical.
@@ -41,6 +45,8 @@ class ConversationSession:
         self.style_manager = StyleManager()
         self.evolution_state = storage.load_evolution_state(user_id) or EvolutionState()
         self.pattern_extractor = PatternExtractor(api_key=api_key)
+        self.answer_storage = AnswerStorage(data_dir=storage.data_dir)
+        self._current_question_id: str | None = None
 
     def send_message(self, content: str) -> str:
         # Store user message for extraction
@@ -142,3 +148,44 @@ class ConversationSession:
         self.storage.save_thread(self.thread)
         self.storage.save_working_memory(self.user_id, self.working_memory)
         self.storage.save_evolution_state(self.user_id, self.evolution_state)
+
+    def _is_refinement_intent(self, message: str) -> bool:
+        """Detect if user wants to refine their last answer."""
+        triggers = [
+            "let me try again",
+            "another attempt",
+            "let me refine",
+            "one more time",
+            "try that again",
+            "let me redo",
+        ]
+        return any(t in message.lower() for t in triggers)
+
+    def _is_mark_best_intent(self, message: str) -> bool:
+        """Detect if user wants to mark current version as best."""
+        triggers = [
+            "mark this as best",
+            "that's my best",
+            "this is the best version",
+            "mark as best",
+        ]
+        return any(t in message.lower() for t in triggers)
+
+    def _is_show_best_intent(self, message: str) -> bool:
+        """Detect if user wants to see their best version."""
+        triggers = [
+            "show me my best",
+            "what was my best answer",
+            "show best version",
+        ]
+        return any(t in message.lower() for t in triggers)
+
+    def _is_compare_intent(self, message: str) -> bool:
+        """Detect if user wants to compare versions."""
+        triggers = [
+            "compare versions",
+            "show the difference",
+            "how did i improve",
+            "compare my answers",
+        ]
+        return any(t in message.lower() for t in triggers)
