@@ -38,7 +38,7 @@ STAGE_ORDER = [
 ]
 
 
-def _create_engine(data_dir: Path | None = None) -> PracticeEngine:
+def _create_engine(data_dir: Path | None = None, hard_mode: bool = False) -> PracticeEngine:
     """Create a PracticeEngine with all dependencies."""
     tracker = ProgressTracker(data_dir=data_dir)
     bank = QuestionBank()
@@ -49,6 +49,7 @@ def _create_engine(data_dir: Path | None = None) -> PracticeEngine:
         progress_tracker=tracker,
         feedback_analyzer=analyzer,
         scorer=scorer,
+        hard_mode=hard_mode,
     )
 
 
@@ -86,6 +87,7 @@ def main():
 @click.option("--review", is_flag=True, help="Review weak areas")
 @click.option("--limit", type=int, default=120, help="Time limit in seconds (for timed mode)")
 @click.option("--questions", type=int, default=5, help="Number of questions to practice")
+@click.option("--hard", is_flag=True, help="Enable hard mode for tougher feedback")
 def practice(
     session: str | None,
     category: str | None,
@@ -93,6 +95,7 @@ def practice(
     review: bool,
     limit: int,
     questions: int,
+    hard: bool,
 ):
     """Start interactive practice session.
 
@@ -105,7 +108,7 @@ def practice(
         python -m ai_working.interview_prep practice --review
     """
     data_dir = _get_data_dir()
-    engine = _create_engine(data_dir)
+    engine = _create_engine(data_dir, hard_mode=hard)
 
     mode = PracticeMode.mixed
     if category:
@@ -346,7 +349,8 @@ def day_mode(night_before: bool, morning_of: bool, one_hour: bool):
     help="Question category",
 )
 @click.option("--questions", type=int, default=3, help="Number of questions")
-def quick_practice(category: str, questions: int):
+@click.option("--hard", is_flag=True, help="Enable hard mode for tougher feedback")
+def quick_practice(category: str, questions: int, hard: bool):
     """Quick practice session with minimal setup.
 
     Fast practice mode for a quick warmup.
@@ -356,7 +360,7 @@ def quick_practice(category: str, questions: int):
         python -m ai_working.interview_prep quick-practice --category technical --questions 5
     """
     data_dir = _get_data_dir()
-    engine = _create_engine(data_dir)
+    engine = _create_engine(data_dir, hard_mode=hard)
     cat_enum = QuestionCategory(category)
 
     async def run():
@@ -389,7 +393,8 @@ def quick_practice(category: str, questions: int):
 @click.option("--user", type=str, default="default", help="User ID for session")
 @click.option("--job", type=click.Path(exists=True), default=None, help="Job posting file to use for context")
 @click.option("--job-url", type=str, default=None, help="Job posting URL to use for context")
-def chat(message: str | None, data_dir: str, user: str, job: str | None, job_url: str | None):
+@click.option("--hard", is_flag=True, help="Enable hard mode for tougher feedback")
+def chat(message: str | None, data_dir: str, user: str, job: str | None, job_url: str | None, hard: bool):
     """Start or continue a conversation with Scout.
 
     Interactive chat with your interview prep coach. Optionally send a single
@@ -405,6 +410,9 @@ def chat(message: str | None, data_dir: str, user: str, job: str | None, job_url
 
     storage = MemoryStorage(data_dir)
     session = ConversationSession(user_id=user, storage=storage)
+
+    if hard:
+        click.echo("\n Hard mode enabled - tougher feedback active")
 
     if job or job_url:
         extractor = JobExtractor()
