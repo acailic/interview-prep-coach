@@ -62,6 +62,7 @@ class FeedbackAnalyzerProtocol(Protocol):
         self,
         question: dict,
         answer: str,
+        hard_mode: bool = False,
     ) -> tuple[str, float, list[str]]:
         """Analyze an answer and return feedback, score, and weak areas."""
         ...
@@ -75,6 +76,7 @@ class ScorerProtocol(Protocol):
         question: dict,
         answer: str,
         feedback: str,
+        hard_mode: bool = False,
     ) -> float:
         """Calculate a score for the answer."""
         ...
