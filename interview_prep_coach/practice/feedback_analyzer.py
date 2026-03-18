@@ -68,6 +68,19 @@ Evaluate the answer for:
 5. Efficiency - Is time/space complexity appropriate?""",
     }
 
+    HARD_MODE_MODIFIER = """
+HARD MODE EVALUATION - Be brutally honest in your evaluation.
+
+Score 0-3: Significant gaps, not interview-ready. Major issues that would concern interviewers.
+Score 4-5: Below average, several areas need work. Would not stand out.
+Score 6-7: Acceptable but not impressive. Meets basic expectations.
+Score 8-9: Polished and impressive. Would catch an interviewer's attention.
+Score 10: Exceptional. Would stand out in competitive interviews.
+
+Default to critique over encouragement. Identify every weakness without sugar-coating.
+Push for excellence - an 8+ requires a truly interview-ready, polished answer.
+"""
+
     def __init__(self, session_manager: Any = None):
         """Initialize the feedback analyzer.
 
@@ -81,12 +94,14 @@ Evaluate the answer for:
         self,
         question: dict,
         answer: str,
+        hard_mode: bool = False,
     ) -> tuple[str, float, list[str]]:
         """Analyze an answer and provide feedback.
 
         Args:
             question: Question dict with 'text' and 'category' keys
             answer: User's answer text
+            hard_mode: If True, use critical evaluation mode
 
         Returns:
             Tuple of (feedback_text, score_0_to_10, list_of_weak_areas)
@@ -100,7 +115,7 @@ Evaluate the answer for:
         except ValueError:
             category = QuestionCategory.behavioral
 
-        system_prompt = self._get_system_prompt(category)
+        system_prompt = self._get_system_prompt(category, hard_mode)
         analysis_prompt = self._build_analysis_prompt(question, answer, category)
 
         options = SessionOptions(
@@ -116,12 +131,33 @@ Evaluate the answer for:
 
             return self._parse_response(response.content)
 
-    def _get_system_prompt(self, category: QuestionCategory) -> str:
-        """Get the system prompt for a question category."""
+    def _get_system_prompt(self, category: QuestionCategory, hard_mode: bool = False) -> str:
+        """Get the system prompt for a question category.
+
+        Args:
+            category: The question category
+            hard_mode: If True, include critical evaluation modifier
+
+        Returns:
+            Complete system prompt string
+        """
         base_prompt = self.CATEGORY_PROMPTS.get(
             category,
             self.CATEGORY_PROMPTS[QuestionCategory.behavioral]
         )
+
+        if hard_mode:
+            return f"""{base_prompt}
+
+IMPORTANT: You must respond in the following JSON format only:
+{{
+    "feedback": "Your detailed feedback (2-3 paragraphs with specific suggestions)",
+    "score": 7.5,
+    "weak_areas": ["area1", "area2"],
+    "strengths": ["strength1", "strength2"]
+}}
+
+{self.HARD_MODE_MODIFIER}"""
 
         return f"""{base_prompt}
 
