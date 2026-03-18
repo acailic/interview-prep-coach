@@ -108,6 +108,7 @@ class PracticeEngine:
         progress_tracker: ProgressTrackerProtocol,
         feedback_analyzer: FeedbackAnalyzerProtocol,
         scorer: ScorerProtocol | None = None,
+        hard_mode: bool = False,
     ):
         """Initialize the practice engine.
 
@@ -116,11 +117,13 @@ class PracticeEngine:
             progress_tracker: Records progress
             feedback_analyzer: Analyzes answers for feedback
             scorer: Optional scorer for calculating scores
+            hard_mode: Whether to use tougher scoring and feedback
         """
         self._question_bank = question_bank
         self._progress_tracker = progress_tracker
         self._feedback_analyzer = feedback_analyzer
         self._scorer = scorer
+        self._hard_mode = hard_mode
         self._current_session: PracticeSession | None = None
         self._pending_questions: list[dict] = []
 
@@ -129,6 +132,7 @@ class PracticeEngine:
         mode: PracticeMode,
         category: QuestionCategory | None = None,
         time_limit: int | None = None,
+        hard_mode: bool | None = None,
     ) -> PracticeSession:
         """Start a new practice session.
 
@@ -136,6 +140,7 @@ class PracticeEngine:
             mode: Practice mode (focused, mixed, timed, review)
             category: Optional category filter for focused mode
             time_limit: Optional time limit in seconds for timed mode
+            hard_mode: Optional override for hard mode (uses instance default if None)
 
         Returns:
             The newly created PracticeSession
@@ -148,12 +153,16 @@ class PracticeEngine:
                 "Session already in progress. Call end_session() first."
             )
 
+        # Use provided hard_mode or fall back to instance default
+        session_hard_mode = hard_mode if hard_mode is not None else self._hard_mode
+
         session_id = str(uuid.uuid4())
         self._current_session = PracticeSession(
             session_id=session_id,
             mode=mode,
             category_filter=category.value if category else None,
             time_limit_seconds=time_limit,
+            hard_mode=session_hard_mode,
         )
 
         exclude_ids = self._progress_tracker.get_completed_question_ids()
@@ -215,12 +224,14 @@ class PracticeEngine:
         if question is None:
             raise ValueError(f"Question not found: {question_id}")
 
+        hard_mode = self._current_session.hard_mode
+
         feedback, score, weak_areas = await self._feedback_analyzer.analyze_answer(
-            question, answer
+            question, answer, hard_mode=hard_mode
         )
 
         if self._scorer:
-            score = self._scorer.calculate_score(question, answer, feedback)
+            score = self._scorer.calculate_score(question, answer, feedback, hard_mode=hard_mode)
 
         attempt = QuestionAttempt(
             question_id=question_id,
