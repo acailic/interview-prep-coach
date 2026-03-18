@@ -98,6 +98,7 @@ class Scorer:
         question: dict,
         answer: str,
         feedback: str,
+        hard_mode: bool = False,
     ) -> float:
         """Calculate a score for the answer.
 
@@ -105,6 +106,7 @@ class Scorer:
             question: Question dict with 'text' and 'category' keys
             answer: User's answer text
             feedback: Feedback text from FeedbackAnalyzer
+            hard_mode: If True, use stricter scoring thresholds
 
         Returns:
             Score from 0.0 to 10.0
@@ -120,13 +122,14 @@ class Scorer:
 
         weak_areas = self._extract_weak_areas_from_feedback(feedback)
 
-        return self.score_answer(feedback, weak_areas, category)
+        return self.score_answer(feedback, weak_areas, category, hard_mode)
 
     def score_answer(
         self,
         feedback: str,
         weak_areas: list[str],
         category: QuestionCategory,
+        hard_mode: bool = False,
     ) -> float:
         """Calculate a score from 0-10 based on feedback and weak areas.
 
@@ -134,14 +137,15 @@ class Scorer:
             feedback: The feedback text from FeedbackAnalyzer
             weak_areas: List of identified weak areas
             category: Question category (affects scoring weights)
+            hard_mode: If True, use stricter scoring thresholds
 
         Returns:
             Score from 0.0 to 10.0
         """
-        base_score = 7.0
+        base_score = 4.0 if hard_mode else 7.0
 
-        sentiment_score = self._analyze_sentiment(feedback)
-        weak_area_penalty = self._calculate_weak_area_penalty(weak_areas)
+        sentiment_score = self._analyze_sentiment(feedback, hard_mode)
+        weak_area_penalty = self._calculate_weak_area_penalty(weak_areas, hard_mode)
 
         raw_score = base_score + sentiment_score - weak_area_penalty
 
@@ -212,14 +216,15 @@ class Scorer:
         total = sum(a.score for a in attempts)
         return round(total / len(attempts), 1)
 
-    def _analyze_sentiment(self, feedback: str) -> float:
+    def _analyze_sentiment(self, feedback: str, hard_mode: bool = False) -> float:
         """Analyze feedback sentiment and return score adjustment.
 
         Args:
             feedback: Feedback text to analyze
+            hard_mode: If True, cap adjustment at ±1.0 instead of ±2.0
 
         Returns:
-            Score adjustment from -2.0 to +2.0
+            Score adjustment from -2.0 to +2.0 (or ±1.0 in hard mode)
         """
         if not feedback:
             return 0.0
@@ -237,30 +242,44 @@ class Scorer:
 
         net_sentiment = positive_count - negative_count
 
-        return max(-2.0, min(2.0, net_sentiment * 0.5))
+        if hard_mode:
+            return max(-1.0, min(1.0, net_sentiment * 0.25))
+        else:
+            return max(-2.0, min(2.0, net_sentiment * 0.5))
 
-    def _calculate_weak_area_penalty(self, weak_areas: list[str]) -> float:
+    def _calculate_weak_area_penalty(self, weak_areas: list[str], hard_mode: bool = False) -> float:
         """Calculate score penalty based on number of weak areas.
 
         Args:
             weak_areas: List of identified weak areas
+            hard_mode: If True, use steeper penalties (2.0/4.0/6.0 vs 1.0/2.0/3.0)
 
         Returns:
-            Penalty from 0.0 to 5.0
+            Penalty from 0.0 to 5.0 (normal) or 0.0 to 6.0 (hard mode)
         """
         if not weak_areas:
             return 0.0
 
         num_weak_areas = len(weak_areas)
 
-        if num_weak_areas == 1:
-            return 1.0
-        elif num_weak_areas == 2:
-            return 2.0
-        elif num_weak_areas == 3:
-            return 3.0
+        if hard_mode:
+            # Hard mode: steeper penalties
+            if num_weak_areas == 1:
+                return 2.0
+            elif num_weak_areas == 2:
+                return 4.0
+            else:
+                return 6.0
         else:
-            return min(5.0, 3.0 + (num_weak_areas - 3) * 0.5)
+            # Normal mode
+            if num_weak_areas == 1:
+                return 1.0
+            elif num_weak_areas == 2:
+                return 2.0
+            elif num_weak_areas == 3:
+                return 3.0
+            else:
+                return min(5.0, 3.0 + (num_weak_areas - 3) * 0.5)
 
     def _extract_weak_areas_from_feedback(self, feedback: str) -> list[str]:
         """Extract weak area indicators from feedback text.
