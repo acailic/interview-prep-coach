@@ -87,6 +87,7 @@ class PracticeSession(BaseModel):
         category_filter: Optional category filter applied
         time_limit_seconds: Optional time limit for the session
         questions: List of question attempts in this session
+        hard_mode: Whether hard mode (tougher scoring) is enabled
     """
 
     session_id: str
@@ -96,6 +97,7 @@ class PracticeSession(BaseModel):
     category_filter: str | None = Field(default=None)
     time_limit_seconds: int | None = Field(default=None)
     questions: list[QuestionAttempt] = Field(default_factory=list)
+    hard_mode: bool = False  # NEW FIELD
 
     class Config:
         json_schema_extra = {
@@ -107,6 +109,7 @@ class PracticeSession(BaseModel):
                 "category_filter": "behavioral",
                 "time_limit_seconds": 1800,
                 "questions": [],
+                "hard_mode": True,
             }
         }
 

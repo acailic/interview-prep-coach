@@ -80,6 +80,23 @@ class TestPracticeSession:
         assert session.mode == PracticeMode.focused
         assert session.questions == []
 
+    def test_create_session_with_hard_mode(self):
+        """Test that PracticeSession can store hard_mode flag."""
+        session = PracticeSession(
+            session_id="session-hard-123",
+            mode=PracticeMode.focused,
+            hard_mode=True,
+        )
+        assert session.hard_mode is True
+
+    def test_hard_mode_defaults_to_false(self):
+        """Test that hard_mode defaults to False."""
+        session = PracticeSession(
+            session_id="session-normal-123",
+            mode=PracticeMode.focused,
+        )
+        assert session.hard_mode is False
+
 
 class TestProgressSummary:
     """Test ProgressSummary model."""
